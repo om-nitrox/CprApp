@@ -4,6 +4,7 @@ class CPRMetrics {
   final int totalCompressions;
   final bool isInRange;
   final DateTime timestamp;
+  final String armAngleFeedback;
 
   CPRMetrics({
     required this.compressionRate,
@@ -11,6 +12,7 @@ class CPRMetrics {
     required this.totalCompressions,
     required this.isInRange,
     required this.timestamp,
+    this.armAngleFeedback = "",
   });
 
   Map<String, dynamic> toJson() {
@@ -20,6 +22,7 @@ class CPRMetrics {
       'totalCompressions': totalCompressions,
       'isInRange': isInRange,
       'timestamp': timestamp.toIso8601String(),
+      'armAngleFeedback': armAngleFeedback,
     };
   }
 }
