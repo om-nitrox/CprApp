@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:flutter_vision/flutter_vision.dart';
+// import 'package:flutter_vision/flutter_vision.dart'; // Commented out - not supported on iOS
 
 import '../services/pose_detection_service.dart';
 import '../services/cpr_analyzer.dart';
@@ -25,10 +25,11 @@ class _TrainingScreenState extends State<TrainingScreen> {
   final PoseDetectionService _poseService = PoseDetectionService();
   final CPRAnalyzer _analyzer = CPRAnalyzer();
 
-  // YOLO Vision State
-  late FlutterVision _vision;
+  // YOLO Vision State (Android only)
+  // FlutterVision? _vision; // Commented out - not supported on iOS
   List<Map<String, dynamic>> _yoloResults = [];
   bool _isDetecting = false;
+  bool _isYoloSupported = false;
 
   // UI and Training State
   List<Landmark> _landmarks = [];
@@ -45,7 +46,8 @@ class _TrainingScreenState extends State<TrainingScreen> {
   @override
   void initState() {
     super.initState();
-    _vision = FlutterVision();
+    // _vision = FlutterVision(); // Commented out - not supported on iOS
+    _isYoloSupported = Platform.isAndroid; // Only support YOLO on Android
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     _initializeApp();
   }
@@ -57,7 +59,7 @@ class _TrainingScreenState extends State<TrainingScreen> {
     _cameraController?.stopImageStream();
     _cameraController?.dispose();
     _poseService.dispose();
-    _vision.closeYoloModel();
+    // _vision?.closeYoloModel(); // Commented out - not supported on iOS
     super.dispose();
   }
 
@@ -66,7 +68,9 @@ class _TrainingScreenState extends State<TrainingScreen> {
   Future<void> _initializeApp() async {
     try {
       await _requestPermissions();
-      await _loadYoloModel();
+      if (_isYoloSupported) {
+        await _loadYoloModel();
+      }
       await _initializePoseDetection();
       await _initializeCamera();
       if (mounted) {
@@ -93,15 +97,21 @@ class _TrainingScreenState extends State<TrainingScreen> {
   }
 
   Future<void> _loadYoloModel() async {
+    if (!_isYoloSupported) {
+      print("ℹ️ YOLO detection not supported on iOS, skipping...");
+      return;
+    }
+    
     try {
-      await _vision.loadYoloModel(
-        labels: 'assets/models/labels.txt',
-        modelPath: 'assets/models/yolov8n.tflite',
-        modelVersion: "yolov8",
-        numThreads: 1,
-        useGpu: true,
-      );
-      print("✅ YOLO model loaded successfully");
+      // YOLO model loading would go here for Android
+      // await _vision.loadYoloModel(
+      //   labels: 'assets/models/labels.txt',
+      //   modelPath: 'assets/models/yolov8n.tflite',
+      //   modelVersion: "yolov8",
+      //   numThreads: 1,
+      //   useGpu: true,
+      // );
+      print("✅ YOLO model loading skipped (iOS not supported)");
     } catch (e) {
       throw Exception("Failed to load YOLO model: $e");
     }
@@ -150,14 +160,20 @@ class _TrainingScreenState extends State<TrainingScreen> {
 
     try {
       final landmarksFuture = _poseService.detectPose(image);
-      final yoloResultFuture = _vision.yoloOnFrame(
-        bytesList: image.planes.map((plane) => plane.bytes).toList(),
-        imageHeight: image.height,
-        imageWidth: image.width,
-        iouThreshold: 0.4,
-        confThreshold: 0.4,
-        classThreshold: 0.5,
-      );
+      
+      // Only run YOLO detection on Android
+      Future<List<Map<String, dynamic>>> yoloResultFuture = Future.value([]);
+      if (_isYoloSupported) {
+        // YOLO detection would go here for Android
+        // yoloResultFuture = _vision.yoloOnFrame(
+        //   bytesList: image.planes.map((plane) => plane.bytes).toList(),
+        //   imageHeight: image.height,
+        //   imageWidth: image.width,
+        //   iouThreshold: 0.4,
+        //   confThreshold: 0.4,
+        //   classThreshold: 0.5,
+        // );
+      }
 
       final results = await Future.wait([landmarksFuture, yoloResultFuture]);
       final landmarks = results[0] as List<Landmark>?;
